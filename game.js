@@ -12,12 +12,21 @@ document.body.appendChild(screen);
 /* Game state variables */
 var start = null;
 var currentInput = {
-  space: false
+  space: false,
+  left: false,
+  right: false,
+  up: false,
+  down: false
 }
 var priorInput = {
-  space: false
+  space: false,
+  left: false,
+  right: false,
+  up: false,
+  down: false
 }
 var x = 0;
+var y = 0;
 
 /** @function handleKeydown
   * Event handler for keydown events
@@ -28,9 +37,17 @@ function handleKeydown(event) {
     case ' ':
       currentInput.space = true;
       break;
+    case 'ArrowUp':
+    case 'w':
+      currentInput.up = true;
+      break;
+    case 'ArrowDown':
+    case 's':
+      currentInput.down = true;
+      break;
   }
 }
-// Attach keydown event handler to the window
+// Attach keyup event handler to the window
 window.addEventListener('keydown', handleKeydown);
 
 /** @function handleKeyup
@@ -41,6 +58,14 @@ function handleKeyup(event) {
   switch(event.key) {
     case ' ':
       currentInput.space = false;
+      break;
+    case 'ArrowUp':
+    case 'w':
+      currentInput.up = false;
+      break;
+    case 'ArrowDown':
+    case 's':
+      currentInput.down = false;
       break;
   }
 }
@@ -76,8 +101,14 @@ function pollInput() {
   */
 function update(elapsedTime) {
   // move the red square when the space bar is down
-  if(currentInput.space) {
-    x += 0.1 * elapsedTime;
+  if(currentInput.space && !priorInput.space) {
+    // TODO: Fire bullet
+  }
+  if(currentInput.up) {
+    y -= 0.1 * elapsedTime;
+  }
+  if(currentInput.down) {
+    y += 0.1 * elapsedTime;
   }
 }
 
@@ -89,7 +120,7 @@ function update(elapsedTime) {
 function render(elapsedTime) {
   screenCtx.clearRect(0, 0, WIDTH, HEIGHT);
   screenCtx.fillStyle = "#ff0000";
-  screenCtx.fillRect(10+x,10,20,20);
+  screenCtx.fillRect(10+x,10+y,20,20);
 }
 
 // Start the game loop
