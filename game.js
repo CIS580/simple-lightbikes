@@ -11,22 +11,21 @@ document.body.appendChild(screen);
 
 /* Game state variables */
 var start = null;
-var currentInput = {
-  space: false,
-  left: false,
-  right: false,
-  up: false,
-  down: false
+var player1 = {
+  x: parseInt(WIDTH / 8),
+  y: parseInt(HEIGHT / 2),
+  direction: 'right',
+  alive: true
 }
-var priorInput = {
-  space: false,
-  left: false,
-  right: false,
-  up: false,
-  down: false
+var player2 = {
+  x: parseInt(WIDTH * 7/8),
+  y: parseInt(HEIGHT / 2),
+  direction: 'left',
+  alive: true
 }
-var x = 0;
-var y = 0;
+var buffer = new ArrayBuffer(8*WIDTH*HEIGHT)
+var court = new Uint8Array(buffer);
+var gameOver = false;
 
 /** @function handleKeydown
   * Event handler for keydown events
@@ -34,43 +33,34 @@ var y = 0;
   */
 function handleKeydown(event) {
   switch(event.key) {
-    case ' ':
-      currentInput.space = true;
-      break;
     case 'ArrowUp':
+      if(player2.direction != 'down') player2.direction = 'up';
+      break;
     case 'w':
-      currentInput.up = true;
+      if(player1.direction != 'down')player1.direction = 'up';
       break;
     case 'ArrowDown':
+      if(player2.direction != 'up') player2.direction = 'down';
+      break;
     case 's':
-      currentInput.down = true;
+      if(player1.direction != 'up') player1.direction = 'down';
+      break;
+    case 'ArrowLeft':
+      if(player2.direction != 'right') player2.direction = 'left';
+      break;
+    case 'a':
+      if(player1.direction != 'right') player1.direction = 'left';
+      break;
+    case 'ArrowRight':
+      if(player2.direction != 'left') player2.direction = 'right';
+      break;
+    case 'd':
+      if(player1.direction != 'left') player1.direction = 'right';
       break;
   }
 }
-// Attach keyup event handler to the window
+// Attach keydown event handler to the window
 window.addEventListener('keydown', handleKeydown);
-
-/** @function handleKeyup
-  * Event handler for keyup events
-  * @param {KeyEvent} event - the keyup event
-  */
-function handleKeyup(event) {
-  switch(event.key) {
-    case ' ':
-      currentInput.space = false;
-      break;
-    case 'ArrowUp':
-    case 'w':
-      currentInput.up = false;
-      break;
-    case 'ArrowDown':
-    case 's':
-      currentInput.down = false;
-      break;
-  }
-}
-// Attach keyup event handler to the window
-window.addEventListener('keyup', handleKeyup);
 
 /** @function loop
   * The main game loop
@@ -81,17 +71,9 @@ function loop(timestamp) {
   if(!start) start = timestamp;
   var elapsedTime = timestamp - start;
   start = timestamp;
-  pollInput();
   update(elapsedTime);
   render(elapsedTime);
   window.requestAnimationFrame(loop);
-}
-
-/** @function pollInput
-  * Copies the current input into the previous input
-  */
-function pollInput() {
-  priorInput = JSON.parse(JSON.stringify(currentInput));
 }
 
 /** @function update
@@ -100,16 +82,45 @@ function pollInput() {
   * elapsed between frames
   */
 function update(elapsedTime) {
-  // move the red square when the space bar is down
-  if(currentInput.space && !priorInput.space) {
-    // TODO: Fire bullet
+  if(gameOver) return;
+  // Move players
+  switch(player1.direction) {
+    case 'up': player1.y--; break;
+    case 'down': player1.y++; break;
+    case 'left': player1.x--; break;
+    case 'right': player1.x++; break;
   }
-  if(currentInput.up) {
-    y -= 0.1 * elapsedTime;
+  switch(player2.direction) {
+    case 'up': player2.y--; break;
+    case 'down': player2.y++; break;
+    case 'left': player2.x--; break;
+    case 'right': player2.x++; break;
   }
-  if(currentInput.down) {
-    y += 0.1 * elapsedTime;
+  // Check for collisions with the sides of the screen
+  if(player1.x < 0 || player1.x > WIDTH || player1.y < 0 || player1.y > HEIGHT) {
+    gameOver = true;
+    player1.alive = false;
+    console.log("Player 1 Died!")
   }
+  if(player2.x < 0 || player2.x > WIDTH || player2.y < 0 || player2.y > HEIGHT) {
+    gameOver = true;
+    player2.alive = false;
+    console.log("Player 2 Died!")
+  }
+  // Check for collisions with light trails
+  if(court[player1.y * WIDTH + player1.x]) {
+    gameOver = true;
+    player1.alive = false;
+    console.log("Player 1 Died!");
+  }
+  if(court[player2.y * WIDTH + player2.x]) {
+    gameOver = true;
+    player2.alive = false;
+    console.log("Player 2 Died!");
+  }
+  // Record player position
+  court[player1.y * WIDTH + player1.x] = 1;
+  court[player2.y * WIDTH + player2.x] = 2;
 }
 
 /** @function render
@@ -118,9 +129,12 @@ function update(elapsedTime) {
   * elapsed between frames
   */
 function render(elapsedTime) {
-  screenCtx.clearRect(0, 0, WIDTH, HEIGHT);
   screenCtx.fillStyle = "#ff0000";
-  screenCtx.fillRect(10+x,10+y,20,20);
+  screenCtx.fillRect(player1.x,player1.y,1,1);
+  if(!player1.alive) screenCtx.fillText("Player 1 is Dead", WIDTH/4-100, HEIGHT/2);
+  screenCtx.fillStyle = "#00ff00";
+  if(!player2.alive) screenCtx.fillText("Player 2 is Dead", WIDTH*3/4-100, HEIGHT/2);
+  screenCtx.fillRect(player2.x,player2.y,1,1);
 }
 
 // Start the game loop
